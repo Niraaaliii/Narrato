@@ -3,19 +3,24 @@ import './App.css';
 
 function App() {
   const [selectedFile, setSelectedFile] = useState(null);
-  const [tone, setTone] = useState('Professional');
-  const [audience, setAudience] = useState('General');
-  const [narrationAudio, setNarrationAudio] = useState(null);
-  const [narrationScript, setNarrationScript] = useState('');
+  const [audience, setAudience] = useState('Students');
+  const [slides, setSlides] = useState([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const audienceOptions = [
+    'Students',
+    'Executives',
+    'Technical',
+    'Layperson'
+  ];
 
   const handleFileChange = (event) => {
     setSelectedFile(event.target.files[0]);
-  };
-
-  const handleToneChange = (event) => {
-    setTone(event.target.value);
+    setSlides([]);
+    setCurrentSlide(0);
   };
 
   const handleAudienceChange = (event) => {
@@ -30,12 +35,11 @@ function App() {
 
     setLoading(true);
     setError(null);
-    setNarrationAudio(null);
-    setNarrationScript('');
+    setSlides([]);
+    setCurrentSlide(0);
 
     const formData = new FormData();
     formData.append('file', selectedFile);
-    formData.append('tone', tone);
     formData.append('audience', audience);
 
     try {
@@ -46,22 +50,12 @@ function App() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to generate narration.');
+        throw new Error(errorData.error || 'Failed to generate narration.');
       }
 
-      // Check if the response is audio or JSON (for fallback)
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('audio/mpeg')) {
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        setNarrationAudio(audioUrl);
-      } else {
-        const data = await response.json();
-        setNarrationScript(data.narrationScript || 'No audio generated, but script is available.');
-        if (data.message) {
-          setError(data.message);
-        }
-      }
+      const data = await response.json();
+      setSlides(data.slides);
+      setCurrentSlide(0);
 
     } catch (err) {
       console.error('Error:', err);
@@ -71,9 +65,40 @@ function App() {
     }
   };
 
+  const handleNextSlide = () => {
+    if (currentSlide < slides.length - 1) {
+      setCurrentSlide(currentSlide + 1);
+      setIsPlaying(false);
+    }
+  };
+
+  const handlePrevSlide = () => {
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1);
+      setIsPlaying(false);
+    }
+  };
+
+  const handlePlayAudio = () => {
+    setIsPlaying(true);
+  };
+
+  const handleAudioEnd = () => {
+    setIsPlaying(false);
+    // Auto-advance to next slide after audio ends
+    if (currentSlide < slides.length - 1) {
+      setTimeout(() => {
+        handleNextSlide();
+      }, 1000);
+    }
+  };
+
+  const currentSlideData = slides[currentSlide];
+
   return (
     <div className="App">
       <h1>Narrato AI Presenter</h1>
+      
       <div className="controls">
         <div className="file-upload">
           <label htmlFor="file-input">Upload Presentation (DOCX, PPTX):</label>
@@ -87,47 +112,69 @@ function App() {
         </div>
 
         <div className="options">
-          <label htmlFor="tone-select">Tone:</label>
-          <select id="tone-select" value={tone} onChange={handleToneChange}>
-            <option value="Professional">Professional</option>
-            <option value="Casual">Casual</option>
-            <option value="Confident">Confident</option>
-            <option value="Enthusiastic">Enthusiastic</option>
-            <option value="Informative">Informative</option>
-          </select>
-
           <label htmlFor="audience-select">Audience:</label>
           <select id="audience-select" value={audience} onChange={handleAudienceChange}>
-            <option value="General">General Public</option>
-            <option value="Experts">Experts</option>
-            <option value="Students">Students</option>
-            <option value="Board of Directors">Board of Directors</option>
+            {audienceOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
           </select>
         </div>
 
-        <button onClick={handleSubmit} disabled={loading}>
-          {loading ? 'Generating...' : 'Generate Narration'}
+        <button onClick={handleSubmit} disabled={loading || !selectedFile}>
+          {loading ? 'Processing...' : 'Generate Presentation'}
         </button>
       </div>
 
       {error && <p className="error-message">{error}</p>}
 
-      {narrationAudio && (
-        <div className="audio-player">
-          <h2>Generated Narration:</h2>
-          <audio controls src={narrationAudio}>
-            Your browser does not support the audio element.
-          </audio>
+      {slides.length > 0 && currentSlideData && (
+        <div className="presentation-player">
+          <h2>Presentation Player</h2>
+          
+          <div className="slide-counter">
+            Slide {currentSlide + 1} of {slides.length}
+          </div>
+
+          <div className="slide-content">
+            <h3>Original Content:</h3>
+            <p>{currentSlideData.originalText}</p>
+            
+            <h3>AI-Generated Narration:</h3>
+            <p>{currentSlideData.rewrittenText}</p>
+          </div>
+
+          <div className="audio-controls">
+            <audio
+              controls
+              src={`data:${currentSlideData.audioMimeType};base64,${currentSlideData.audioBase64}`}
+              onPlay={handlePlayAudio}
+              onEnded={handleAudioEnd}
+              key={currentSlide}
+            >
+              Your browser does not support the audio element.
+            </audio>
+          </div>
+
+          <div className="slide-navigation">
+            <button 
+              onClick={handlePrevSlide} 
+              disabled={currentSlide === 0}
+            >
+              Previous
+            </button>
+            <button 
+              onClick={handleNextSlide} 
+              disabled={currentSlide === slides.length - 1}
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
 
-      {narrationScript && !narrationAudio && (
-        <div className="narration-script">
-          <h2>Narration Script (Audio Not Available):</h2>
-          <p>{narrationScript}</p>
-          <p className="fallback-note">
-            (Audio generation failed or Speechify API key is not configured. Displaying script instead.)
-          </p>
+      {slides.length === 0 && !loading && !error && (
+        <div className="welcome-message">
+          <p>Upload a presentation file and select your audience to get started!</p>
         </div>
       )}
     </div>

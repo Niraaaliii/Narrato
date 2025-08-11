@@ -1,10 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const mammoth = require('mammoth'); // For .docx
-const PptxGenJS = require('pptxgenjs'); // For .pptx (will use for text extraction)
+const OpenAI = require('openai');
+const { Deepgram } = require('@deepgram/sdk');
 require('dotenv').config();
 
 const app = express();
@@ -15,9 +16,42 @@ app.use(express.json());
 
 const upload = multer({ dest: 'uploads/' });
 
-// Google Gemini API setup
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// OpenAI API setup
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Deepgram API setup
+const deepgram = new Deepgram(process.env.DEEPGRAM_API_KEY);
+
+// Helper function to extract text from PPTX
+async function extractTextFromPPTX(filePath) {
+    try {
+        const JSZip = require('jszip');
+        const zip = new JSZip();
+        const data = fs.readFileSync(filePath);
+        const zipContent = await zip.loadAsync(data);
+        
+        const slideTexts = [];
+        const slideFiles = Object.keys(zipContent.files).filter(name => name.startsWith('ppt/slides/slide') && name.endsWith('.xml'));
+        
+        for (const slideFile of slideFiles) {
+            const slideXml = await zipContent.files[slideFile].async('text');
+            const textMatches = slideXml.match(/<a:t[^>]*>(.*?)<\/a:t>/g);
+            if (textMatches) {
+                const slideText = textMatches.map(match => match.replace(/<a:t[^>]*>(.*?)<\/a:t>/, '$1')).join(' ');
+                if (slideText.trim()) {
+                    slideTexts.push(slideText.trim());
+                }
+            }
+        }
+        
+        return slideTexts;
+    } catch (error) {
+        console.error('Error extracting text from PPTX:', error);
+        throw error;
+    }
+}
 
 app.get('/', (req, res) => {
     res.send('Narrato Backend is running!');
@@ -28,97 +62,92 @@ app.post('/narrate', upload.single('file'), async (req, res) => {
         return res.status(400).send('No file uploaded.');
     }
 
-    const { tone, audience } = req.body;
+    const { audience } = req.body;
     const filePath = req.file.path;
-    const fileExtension = req.file.originalname.split('.').pop();
-
-    let extractedText = '';
+    const fileExtension = req.file.originalname.split('.').pop().toLowerCase();
 
     try {
+        let extractedSlides = [];
+
         if (fileExtension === 'docx') {
             const result = await mammoth.extractRawText({ path: filePath });
-            extractedText = result.value;
+            const fullText = result.value;
+            // Split document into paragraphs for processing as "slides"
+            extractedSlides = fullText.split(/\n\n+/).filter(text => text.trim().length > 0);
         } else if (fileExtension === 'pptx') {
-            // PPTX text extraction is more complex. For MVP, we'll use a placeholder
-            // or a simpler library if available. pptxgenjs is for creating, not parsing.
-            // A dedicated parsing library like 'officegen' or 'extract-text-from-docx-pptx'
-            // would be better, but might add complexity.
-            // For now, we'll simulate extraction or use a very basic approach.
-            extractedText = "Placeholder text from PPTX. PPTX parsing is complex and will be refined.";
-            // In a real scenario, you'd use a library like 'extract-text-from-docx-pptx'
-            // or a cloud service for robust PPTX parsing.
+            extractedSlides = await extractTextFromPPTX(filePath);
         } else {
-            return res.status(400).send('Unsupported file type.');
+            return res.status(400).send('Unsupported file type. Please upload .docx or .pptx files.');
         }
 
-        // Step 1: Content Analysis with Gemini
-        const analysisPrompt = `Analyze the following presentation slide text. Identify the key topics, data points, and the overall sentiment. Output a JSON object with the keys: "main_topic", "key_data", "sentiment".
+        if (extractedSlides.length === 0) {
+            return res.status(400).send('No text content found in the uploaded file.');
+        }
 
-        Text: "${extractedText}"`;
+        // Process each slide with OpenAI
+        const processedSlides = [];
+        
+        for (let i = 0; i < extractedSlides.length; i++) {
+            const slideText = extractedSlides[i];
+            
+            // LLM-Powered Content Customization
+            const prompt = `You are a professional presenter. Rewrite the following slide content for a ${audience} audience, making it engaging, clear, and concise. Keep it to 2-3 sentences.
 
-        const analysisResult = await model.generateContent(analysisPrompt);
-        const analysisResponse = await analysisResult.response;
-        const analysisJson = JSON.parse(analysisResponse.text());
+Slide content: ${slideText}
 
-        // Step 2: Narration Generation with Gemini
-        const narrationPrompt = `You are a ${tone} presenter addressing a ${audience}. Your tone is ${tone} and concise. Based on the following analysis of a presentation slide, generate a narration script of 2-3 sentences. Do not just list the data; interpret it for the audience.
+Rewritten content:`;
 
-        Analysis: ${JSON.stringify(analysisJson)}
-        User-defined Tone: "${tone}"
-        Audience: "${audience}"
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "You are a helpful assistant that rewrites presentation content for specific audiences." },
+                    { role: "user", content: prompt }
+                ],
+                max_tokens: 150
+            });
 
-        Narration Script:`;
+            const rewrittenText = completion.choices[0].message.content.trim();
+            
+            // Text-to-Speech Conversion with Deepgram
+            const ttsResult = await deepgram.speak.request(
+                { text: rewrittenText },
+                {
+                    model: "aura-asteria-en",
+                    encoding: "linear16",
+                    container: "wav"
+                }
+            );
 
-        const narrationResult = await model.generateContent(narrationPrompt);
-        const narrationResponse = await narrationResult.response;
-        const narrationScript = narrationResponse.text();
+            const audioBuffer = await ttsResult.getStream();
+            const audioData = Buffer.from(await audioBuffer.arrayBuffer());
+            const audioBase64 = audioData.toString('base64');
 
-        // Step 3: Text-to-Speech with Speechify (or Web Speech API fallback)
-        const speechifyApiKey = process.env.SPEECHIFY_API_KEY; // Assuming you get an API key for Speechify
-        const speechifyApiUrl = 'https://api.speechify.com/v1/audio'; // Placeholder URL, check Speechify docs
-
-        if (speechifyApiKey) {
-            try {
-                const speechifyResponse = await axios.post(speechifyApiUrl, {
-                    text: narrationScript,
-                    voice: 'default', // Or a specific voice ID if Speechify provides options
-                    // Add other parameters as required by Speechify API
-                }, {
-                    headers: {
-                        'Authorization': `Bearer ${speechifyApiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    responseType: 'arraybuffer' // To handle audio binary data
-                });
-
-                // Assuming Speechify returns an audio file directly
-                res.setHeader('Content-Type', 'audio/mpeg'); // Or appropriate audio type
-                res.send(Buffer.from(speechifyResponse.data));
-
-            } catch (speechifyError) {
-                console.error('Speechify API Error:', speechifyError.response ? speechifyError.response.data : speechifyError.message);
-                // Fallback to Web Speech API or a simpler response if Speechify fails
-                res.status(500).json({
-                    message: 'Failed to generate voiceover with Speechify. Using text fallback.',
-                    narrationScript: narrationScript
-                });
-            }
-        } else {
-            // Fallback if no Speechify API key is provided
-            res.status(200).json({
-                message: 'Speechify API key not configured. Narration script generated (no audio).',
-                narrationScript: narrationScript
+            processedSlides.push({
+                slideNumber: i + 1,
+                originalText: slideText,
+                rewrittenText: rewrittenText,
+                audioBase64: audioBase64,
+                audioMimeType: 'audio/wav'
             });
         }
 
+        res.json({
+            success: true,
+            slides: processedSlides,
+            totalSlides: processedSlides.length
+        });
+
     } catch (error) {
-        console.error('Error processing file or generating narration:', error);
-        res.status(500).send('Error processing file or generating narration.');
+        console.error('Error processing file:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error processing file: ' + error.message
+        });
     } finally {
-        // Clean up the uploaded file
-        // fs.unlink(filePath, (err) => {
-        //     if (err) console.error('Error deleting uploaded file:', err);
-        // });
+        // Clean up uploaded file
+        fs.unlink(filePath, (err) => {
+            if (err) console.error('Error deleting uploaded file:', err);
+        });
     }
 });
 
