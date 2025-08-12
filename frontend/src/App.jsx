@@ -9,6 +9,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [note, setNote] = useState(null);
 
   const audienceOptions = [
     'Students',
@@ -21,6 +22,7 @@ function App() {
     setSelectedFile(event.target.files[0]);
     setSlides([]);
     setCurrentSlide(0);
+    setNote(null);
   };
 
   const handleAudienceChange = (event) => {
@@ -37,6 +39,7 @@ function App() {
     setError(null);
     setSlides([]);
     setCurrentSlide(0);
+    setNote(null);
 
     const formData = new FormData();
     formData.append('file', selectedFile);
@@ -56,6 +59,7 @@ function App() {
       const data = await response.json();
       setSlides(data.slides);
       setCurrentSlide(0);
+      setNote(data.note);
 
     } catch (err) {
       console.error('Error:', err);
@@ -125,7 +129,20 @@ function App() {
         </button>
       </div>
 
-      {error && <p className="error-message">{error}</p>}
+      {error && (
+        <div className="error-message">
+          <p>{error}</p>
+          {error.includes('Rate limit') && (
+            <p>💡 Tip: Try again in a minute, or consider upgrading your API plan for unlimited usage.</p>
+          )}
+        </div>
+      )}
+
+      {note && (
+        <div className="note-message">
+          <p>ℹ️ {note}</p>
+        </div>
+      )}
 
       {slides.length > 0 && currentSlideData && (
         <div className="presentation-player">
@@ -134,6 +151,12 @@ function App() {
           <div className="slide-counter">
             Slide {currentSlide + 1} of {slides.length}
           </div>
+
+          {currentSlideData.usedFallback && (
+            <div className="fallback-warning">
+              ⚠️ Using basic processing due to AI service limits
+            </div>
+          )}
 
           <div className="slide-content">
             <h3>Original Content:</h3>
@@ -175,6 +198,7 @@ function App() {
       {slides.length === 0 && !loading && !error && (
         <div className="welcome-message">
           <p>Upload a presentation file and select your audience to get started!</p>
+          <p>💡 <strong>Tip:</strong> If you see rate limit errors, wait a minute and try again, or use the basic processing mode.</p>
         </div>
       )}
     </div>

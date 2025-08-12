@@ -4,8 +4,8 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const mammoth = require('mammoth'); // For .docx
-const OpenAI = require('openai');
-const { Deepgram } = require('@deepgram/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { createClient } = require('@deepgram/sdk');
 require('dotenv').config();
 
 const app = express();
@@ -16,13 +16,33 @@ app.use(express.json());
 
 const upload = multer({ dest: 'uploads/' });
 
-// OpenAI API setup
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+// Google Gemini API setup
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-// Deepgram API setup
-const deepgram = new Deepgram(process.env.DEEPGRAM_API_KEY);
+// Deepgram API setup (v3 format)
+const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
+
+// Rate limiting for Gemini API
+let requestCount = 0;
+const MAX_REQUESTS_PER_MINUTE = 10;
+let resetTime = Date.now() + 60000;
+
+// Helper function to check rate limit
+function checkRateLimit() {
+    const now = Date.now();
+    if (now > resetTime) {
+        requestCount = 0;
+        resetTime = now + 60000;
+    }
+    
+    if (requestCount >= MAX_REQUESTS_PER_MINUTE) {
+        const waitTime = Math.ceil((resetTime - now) / 1000);
+        throw new Error(`Rate limit exceeded. Please wait ${waitTime} seconds before trying again.`);
+    }
+    
+    requestCount++;
+}
 
 // Helper function to extract text from PPTX
 async function extractTextFromPPTX(filePath) {
@@ -51,6 +71,24 @@ async function extractTextFromPPTX(filePath) {
         console.error('Error extracting text from PPTX:', error);
         throw error;
     }
+}
+
+// Fallback text processing without AI
+function processTextWithoutAI(slideText, audience) {
+    // Simple fallback that adds audience-appropriate prefixes
+    const prefixes = {
+        'Students': 'For students, ',
+        'Executives': 'For executives, ',
+        'Technical': 'From a technical perspective, ',
+        'Layperson': 'In simple terms, '
+    };
+    
+    const prefix = prefixes[audience] || '';
+    const sentences = slideText.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    
+    // Take first 2-3 sentences and add prefix
+    const processed = sentences.slice(0, 2).join('. ') + '.';
+    return prefix + processed;
 }
 
 app.get('/', (req, res) => {
@@ -84,32 +122,38 @@ app.post('/narrate', upload.single('file'), async (req, res) => {
             return res.status(400).send('No text content found in the uploaded file.');
         }
 
-        // Process each slide with OpenAI
+        // Limit processing to first 5 slides to avoid rate limits
+        const slidesToProcess = extractedSlides.slice(0, 5);
         const processedSlides = [];
         
-        for (let i = 0; i < extractedSlides.length; i++) {
-            const slideText = extractedSlides[i];
+        for (let i = 0; i < slidesToProcess.length; i++) {
+            const slideText = slidesToProcess[i];
+            let rewrittenText;
+            let usedFallback = false;
             
-            // LLM-Powered Content Customization
-            const prompt = `You are a professional presenter. Rewrite the following slide content for a ${audience} audience, making it engaging, clear, and concise. Keep it to 2-3 sentences.
+            try {
+                checkRateLimit();
+                
+                // LLM-Powered Content Customization
+                const prompt = `You are a professional presenter. Rewrite the following slide content for a ${audience} audience, making it engaging, clear, and concise. Keep it to 2-3 sentences.
 
 Slide content: ${slideText}
 
 Rewritten content:`;
 
-            const completion = await openai.chat.completions.create({
-                model: "gpt-4o-mini",
-                messages: [
-                    { role: "system", content: "You are a helpful assistant that rewrites presentation content for specific audiences." },
-                    { role: "user", content: prompt }
-                ],
-                max_tokens: 150
-            });
-
-            const rewrittenText = completion.choices[0].message.content.trim();
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                rewrittenText = response.text().trim();
+                
+            } catch (aiError) {
+                console.warn('AI processing failed, using fallback:', aiError.message);
+                // Use fallback processing when AI fails
+                rewrittenText = processTextWithoutAI(slideText, audience);
+                usedFallback = true;
+            }
             
-            // Text-to-Speech Conversion with Deepgram
-            const ttsResult = await deepgram.speak.request(
+            // Text-to-Speech Conversion with Deepgram v3
+            const { result: ttsResult, error } = await deepgram.speak.request(
                 { text: rewrittenText },
                 {
                     model: "aura-asteria-en",
@@ -118,8 +162,12 @@ Rewritten content:`;
                 }
             );
 
-            const audioBuffer = await ttsResult.getStream();
-            const audioData = Buffer.from(await audioBuffer.arrayBuffer());
+            if (error) {
+                throw new Error(`Deepgram TTS error: ${error}`);
+            }
+
+            const audioBuffer = await ttsResult.arrayBuffer();
+            const audioData = Buffer.from(audioBuffer);
             const audioBase64 = audioData.toString('base64');
 
             processedSlides.push({
@@ -127,21 +175,25 @@ Rewritten content:`;
                 originalText: slideText,
                 rewrittenText: rewrittenText,
                 audioBase64: audioBase64,
-                audioMimeType: 'audio/wav'
+                audioMimeType: 'audio/wav',
+                usedFallback: usedFallback
             });
         }
 
         res.json({
             success: true,
             slides: processedSlides,
-            totalSlides: processedSlides.length
+            totalSlides: processedSlides.length,
+            totalOriginalSlides: extractedSlides.length,
+            note: processedSlides.length < extractedSlides.length ? 
+                `Showing first ${processedSlides.length} of ${extractedSlides.length} slides due to rate limits.` : null
         });
 
     } catch (error) {
         console.error('Error processing file:', error);
         res.status(500).json({
             success: false,
-            error: 'Error processing file: ' + error.message
+            error: error.message || 'Error processing file'
         });
     } finally {
         // Clean up uploaded file

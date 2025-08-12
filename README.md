@@ -1,115 +1,87 @@
-# Narrato AI Presenter
+# Narrato - AI-Powered Presentation Narrator
 
-Narrato is an AI-powered presentation narrator that transforms static presentations into engaging, audience-specific audio experiences. This project demonstrates advanced AI integration, LLM prompting techniques, and real-time text-to-speech capabilities.
+Transform your presentations into engaging, audience-specific narrations with AI-powered content customization and text-to-speech capabilities.
 
-## 🚀 Features
+## Features
 
-- **Multi-format Support**: Upload DOCX and PPTX files
-- **AI-Powered Content Adaptation**: Uses GPT-4o-mini to rewrite content for specific audiences
-- **Professional Voice Synthesis**: High-quality text-to-speech using Deepgram's Aura models
-- **Interactive Player**: Navigate through slides with synchronized audio
+- **Multi-format Support**: Upload .pptx and .docx files
 - **Audience Customization**: Tailor content for Students, Executives, Technical, or Layperson audiences
-- **Real-time Processing**: Instant generation of narrated presentations
+- **AI-Powered Rewriting**: Uses Google Gemini to rewrite content for maximum engagement
+- **Text-to-Speech**: Converts rewritten content to natural-sounding audio using Deepgram
+- **Rate Limiting**: Built-in safeguards to handle API rate limits gracefully
+- **Fallback Processing**: Basic processing when AI services are unavailable
+- **Responsive Design**: Works on desktop and mobile devices
 
-## 🛠️ Technology Stack
-
-### Backend
-- **Node.js** with Express.js for REST API
-- **OpenAI GPT-4o-mini** for content rewriting and audience adaptation
-- **Deepgram** for professional text-to-speech synthesis
-- **Mammoth** for DOCX text extraction
-- **JSZip** for PPTX text extraction
-
-### Frontend
-- **React 19** with Vite for fast development
-- **Modern CSS** with responsive design
-- **Real-time audio playback** with HTML5 audio controls
-
-## 🎯 AI Capabilities Demonstrated
-
-### 1. Advanced Prompting Techniques
-- **Context-aware content rewriting**: Adapts technical content for different audience levels
-- **Tone adaptation**: Adjusts language complexity and formality
-- **Conciseness optimization**: Transforms verbose slides into engaging 2-3 sentence narrations
-
-### 2. Multi-step AI Pipeline
-1. **Content Extraction**: Intelligent parsing of presentation formats
-2. **Context Analysis**: Understanding slide structure and key messages
-3. **Audience Adaptation**: Dynamic rewriting based on target audience
-4. **Voice Synthesis**: Professional-grade audio generation
-
-### 3. Real-time Processing
-- **Streaming audio**: Base64-encoded audio delivery
-- **Progressive enhancement**: Immediate feedback during processing
-- **Error handling**: Robust error recovery and user feedback
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
-- Node.js 18+ installed
-- OpenAI API key
+
+- Node.js (v16 or higher)
+- Google Gemini API key
 - Deepgram API key
 
 ### Installation
 
 1. **Clone the repository**
-```bash
-git clone https://github.com/Niraaaliii/Narrato.git
-cd Narrato
-```
+   ```bash
+   git clone <repository-url>
+   cd narrato
+   ```
 
-2. **Backend Setup**
-```bash
-cd backend
-npm install
-```
+2. **Install backend dependencies**
+   ```bash
+   cd backend
+   npm install
+   ```
 
-3. **Frontend Setup**
-```bash
-cd frontend
-npm install
-```
+3. **Install frontend dependencies**
+   ```bash
+   cd ../frontend
+   npm install
+   ```
 
-4. **Environment Configuration**
-Create a `.env` file in the backend directory:
-```bash
-# OpenAI API Key (for GPT-4o-mini)
-OPENAI_API_KEY=your_openai_api_key_here
+4. **Set up environment variables**
+   
+   Create a `.env` file in the backend directory:
+   ```bash
+   cd ../backend
+   touch .env
+   ```
+   
+   Add your API keys to the `.env` file:
+   ```
+   GEMINI_API_KEY=your_gemini_api_key_here
+   DEEPGRAM_API_KEY=your_deepgram_api_key_here
+   ```
 
-# Deepgram API Key (for TTS)
-DEEPGRAM_API_KEY=your_deepgram_api_key_here
-```
+5. **Start the backend server**
+   ```bash
+   npm start
+   ```
+   The backend will run on http://localhost:3001
 
-5. **Start the Application**
-```bash
-# Terminal 1: Backend
-cd backend
-npm start
+6. **Start the frontend development server**
+   ```bash
+   cd ../frontend
+   npm run dev
+   ```
+   The frontend will run on http://localhost:5173
 
-# Terminal 2: Frontend
-cd frontend
-npm run dev
-```
+## Usage
 
-6. **Access the Application**
-- Frontend: http://localhost:5173
-- Backend: http://localhost:3001
+1. **Upload a file**: Click "Choose File" and select a .pptx or .docx file
+2. **Select audience**: Choose your target audience from the dropdown
+3. **Generate narration**: Click "Generate Narration" to process your presentation
+4. **Listen and navigate**: Use the audio player to listen to each slide, and navigate between slides with Previous/Next buttons
 
-## 📖 Usage Guide
-
-1. **Upload a Presentation**: Select a DOCX or PPTX file
-2. **Choose Audience**: Select from Students, Executives, Technical, or Layperson
-3. **Generate Narration**: Click "Generate Presentation"
-4. **Experience**: Navigate through slides with synchronized audio
-
-## 🔧 API Endpoints
+## API Endpoints
 
 ### POST /narrate
-Upload a presentation file and receive AI-generated narration.
+Upload a presentation file and receive AI-customized narrations.
 
 **Request:**
-- `file`: DOCX or PPTX file
-- `audience`: Target audience (Students, Executives, Technical, Layperson)
+- `file`: .pptx or .docx file
+- `audience`: One of "Students", "Executives", "Technical", or "Layperson"
 
 **Response:**
 ```json
@@ -119,85 +91,101 @@ Upload a presentation file and receive AI-generated narration.
     {
       "slideNumber": 1,
       "originalText": "Original slide content...",
-      "rewrittenText": "AI-optimized narration...",
-      "audioBase64": "base64-encoded-audio...",
-      "audioMimeType": "audio/wav"
+      "rewrittenText": "AI-customized narration...",
+      "audioBase64": "base64-encoded-audio-data...",
+      "audioMimeType": "audio/wav",
+      "usedFallback": false
     }
   ],
-  "totalSlides": 5
+  "totalSlides": 5,
+  "totalOriginalSlides": 12,
+  "note": "Showing first 5 of 12 slides due to rate limits."
 }
 ```
 
-## 🎯 Demo Scenarios
+## Architecture
 
-### Scenario 1: Technical to Layperson
-Upload a technical presentation and watch how complex jargon is transformed into accessible language for general audiences.
+### Backend (Node.js/Express)
+- **File Processing**: Extracts text from .pptx and .docx files
+- **AI Integration**: Google Gemini API for content rewriting
+- **Text-to-Speech**: Deepgram API for audio generation
+- **Rate Limiting**: Prevents API abuse with built-in limits
 
-### Scenario 2: Academic to Executive
-See how academic content is adapted for busy executives with concise, action-oriented language.
+### Frontend (React/Vite)
+- **File Upload**: Drag-and-drop or click-to-upload interface
+- **Audience Selection**: Dropdown for target audience
+- **Audio Player**: Built-in audio controls with auto-advance
+- **Responsive Design**: Mobile-friendly interface
 
-### Scenario 3: Multi-format Processing
-Experience seamless processing of both Word documents and PowerPoint presentations.
+## Error Handling
 
-## 🏗️ Architecture Highlights
+The application includes comprehensive error handling:
 
-### Scalable Design
-- **Modular extraction**: Easy to add new file formats
-- **Configurable AI models**: Swap between different LLMs and TTS providers
-- **Extensible audience types**: Add new audience profiles easily
+- **Rate Limiting**: Shows wait time when API limits are reached
+- **File Processing**: Handles corrupted or empty files gracefully
+- **API Failures**: Falls back to basic processing when AI services fail
+- **Network Issues**: Provides clear error messages for connection problems
 
-### Performance Optimizations
-- **Efficient file processing**: Streaming extraction and processing
-- **Optimized audio delivery**: Base64 encoding for immediate playback
-- **Responsive UI**: Progressive loading and error states
+## Development
 
-## 🎭 Advanced Prompting Examples
+### Adding New File Formats
 
-### Content Rewriting Prompt
+To support additional file formats, extend the file processing logic in `backend/index.js`:
+
+```javascript
+// Add new format handler
+else if (fileExtension === 'pdf') {
+    // Add PDF processing logic
+}
 ```
-You are a professional presenter. Rewrite the following slide content for a {audience} audience, making it engaging, clear, and concise. Keep it to 2-3 sentences.
 
-Slide content: {content}
+### Customizing AI Prompts
+
+Modify the prompt in `backend/index.js` to change how content is rewritten:
+
+```javascript
+const prompt = `Your custom prompt here...`;
 ```
 
-### Audience Adaptation Logic
-- **Students**: Educational tone with examples and explanations
-- **Executives**: Concise, action-oriented language with key takeaways
-- **Technical**: Precise terminology with technical depth
-- **Layperson**: Simplified language with analogies and context
+### Styling
 
-## 🛡️ Error Handling
+The application uses CSS modules for styling. Customize the appearance by modifying `frontend/src/App.css`.
 
-- **File validation**: Checks for supported formats and non-empty content
-- **API resilience**: Graceful handling of API failures with user feedback
-- **Content validation**: Ensures meaningful content extraction before processing
+## Troubleshooting
 
-## 🚀 Future Enhancements
+### Common Issues
 
-- **Multi-language support**: Expand to additional languages
-- **Voice selection**: Multiple voice options and accents
-- **Cloud storage**: Save and share narrated presentations
-- **Real-time collaboration**: Multi-user editing and narration
-- **Advanced analytics**: Track engagement and comprehension metrics
+1. **"Rate limit exceeded"**
+   - Wait 60 seconds and try again
+   - Consider upgrading your API plan
 
-## 📊 Development Timeline
+2. **"No text content found"**
+   - Ensure your presentation contains actual text (not just images)
+   - Check that the file isn't corrupted
 
-This project was completed in **48 hours** as a portfolio demonstration of AI integration capabilities.
+3. **Audio not playing**
+   - Check browser console for errors
+   - Ensure audio format is supported by your browser
 
-### Day 1: Foundation
-- Backend API setup and file processing
-- AI integration with OpenAI and Deepgram
-- Basic frontend structure
+4. **File upload fails**
+   - Check file size (large files may timeout)
+   - Ensure file format is supported
 
-### Day 2: Polish
-- Advanced UI/UX implementation
-- Error handling and edge cases
-- Performance optimization and testing
+### Debug Mode
 
-## 🤝 Contributing
+Enable detailed logging by setting the environment variable:
+```bash
+DEBUG=true npm start
+```
 
-This is a portfolio project, but suggestions and improvements are welcome! Feel free to open issues or submit pull requests.
+## Contributing
 
-## 📄 License
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-MIT License - feel free to use this project as a reference for your own AI integrations.
+## License
+
+MIT License - see LICENSE file for details
