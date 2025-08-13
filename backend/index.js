@@ -97,7 +97,7 @@ app.get('/', (req, res) => {
 
 app.post('/narrate', upload.single('file'), async (req, res) => {
     if (!req.file) {
-        return res.status(400).send('No file uploaded.');
+        return res.status(400).json({ success: false, error: 'No file uploaded.' });
     }
 
     const { audience } = req.body;
@@ -114,12 +114,16 @@ app.post('/narrate', upload.single('file'), async (req, res) => {
             extractedSlides = fullText.split(/\n\n+/).filter(text => text.trim().length > 0);
         } else if (fileExtension === 'pptx') {
             extractedSlides = await extractTextFromPPTX(filePath);
-        } else {
-            return res.status(400).send('Unsupported file type. Please upload .docx or .pptx files.');
+        } else if (fileExtension === 'txt') {
+            const fullText = fs.readFileSync(filePath, 'utf8');
+            extractedSlides = fullText.split(/\n\n+/).filter(text => text.trim().length > 0);
+        }
+        else {
+            return res.status(400).json({ success: false, error: 'Unsupported file type. Please upload .docx, .pptx, or .txt files.' });
         }
 
         if (extractedSlides.length === 0) {
-            return res.status(400).send('No text content found in the uploaded file.');
+            return res.status(400).json({ success: false, error: 'No text content found in the uploaded file.' });
         }
 
         // Limit processing to first 5 slides to avoid rate limits
