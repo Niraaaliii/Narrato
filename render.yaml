@@ -29,5 +29,4 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://narrato-backend.onrender.com
-    region: oregon
     plan: starter
