@@ -139,11 +139,20 @@ app.post('/narrate', upload.single('file'), async (req, res) => {
                 checkRateLimit();
                 
                 // LLM-Powered Content Customization
-                const prompt = `You are a professional presenter. Rewrite the following slide content for a ${audience} audience, making it engaging, clear, and concise. Keep it to 2-3 sentences.
+                const prompt = `You are an expert presentation coach and content strategist. Transform the following slide content into a compelling, audience-specific narrative that captures key insights and actionable takeaways. 
+
+Requirements:
+- Create a concise 2-3 sentence summary that highlights the most important points
+- Use language and tone appropriate for ${audience} audience
+- Include specific examples or analogies when helpful
+- Focus on clarity and memorability
+- Make it sound natural and conversational, not robotic
+- If the slide has data or statistics, emphasize the key insight or implication
+- If the slide has a process or concept, explain the "why" behind it
 
 Slide content: ${slideText}
 
-Rewritten content:`;
+Transform this into an engaging narrative:`;
 
                 const result = await model.generateContent(prompt);
                 const response = await result.response;
