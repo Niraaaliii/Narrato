@@ -202,6 +202,13 @@ input[type="file"] {
   width: 100%;
 }
 
+.select-label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .select-trigger {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -548,6 +555,24 @@ input[type="file"] {
   font-size: 1.1rem;
   color: var(--text-secondary);
   margin-bottom: var(--spacing-lg);
+}
+
+.welcome-features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--text-secondary);
+}
+
+.feature-icon {
+  font-size: 1.2rem;
 }
 
 /* Responsive Design */

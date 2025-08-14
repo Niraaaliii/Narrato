@@ -301,7 +301,7 @@ function App() {
     formData.append('audience', audience);
 
     try {
-      const response = await fetch('http://localhost:3001/narrate', {
+      const response = await fetch('/api/narrate', {
         method: 'POST',
         body: formData,
       });

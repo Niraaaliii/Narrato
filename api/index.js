@@ -9,12 +9,22 @@ const { createClient } = require('@deepgram/sdk');
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 3001;
 
-app.use(cors());
+// Configure CORS for Vercel
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://narrato-ai.vercel.app', 'https://narrato-ai-git-main-niraaaliii.vercel.app']
+    : ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true
+}));
+
 app.use(express.json());
 
-const upload = multer({ dest: 'uploads/' });
+// Configure multer for Vercel serverless
+const upload = multer({ 
+  dest: '/tmp/uploads/',
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
 
 // Google Gemini API setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -91,10 +101,12 @@ function processTextWithoutAI(slideText, audience) {
     return prefix + processed;
 }
 
+// Health check endpoint
 app.get('/', (req, res) => {
-    res.send('Narrato Backend is running!');
+    res.json({ message: 'Narrato API is running!' });
 });
 
+// Main narration endpoint
 app.post('/narrate', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, error: 'No file uploaded.' });
@@ -216,6 +228,5 @@ Transform this into an engaging narrative:`;
     }
 });
 
-app.listen(port, () => {
-    console.log(`Narrato Backend listening at http://localhost:${port}`);
-});
+// Export for Vercel serverless function
+module.exports = app;
