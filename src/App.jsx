@@ -307,19 +307,69 @@ function App() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate narration.');
+        let errorMsg = 'Failed to generate narration.';
+        try {
+            const errorData = await response.json();
+            errorMsg = errorData.error || errorMsg;
+        } catch (e) {
+            errorMsg = response.statusText;
+        }
+        throw new Error(errorMsg);
       }
 
-      const data = await response.json();
-      setSlides(data.slides);
-      setCurrentSlide(0);
-      setNote(data.note);
+      // Handle NDJSON streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      const processStream = async () => {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+                if (buffer.length > 0) {
+                    // Process any remaining data in the buffer
+                    handleStreamChunk(buffer);
+                }
+                setLoading(false);
+                return;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            
+            // The last line might be incomplete, so keep it in the buffer
+            buffer = lines.pop(); 
+
+            for (const line of lines) {
+                handleStreamChunk(line);
+            }
+        }
+      };
+      
+      const handleStreamChunk = (line) => {
+        if (line.trim() === '') return;
+        try {
+            const data = JSON.parse(line);
+            if (data.type === 'metadata') {
+                if (!data.success) {
+                    throw new Error(data.error || 'Processing failed.');
+                }
+                setNote(data.note);
+            } else if (data.type === 'slide') {
+                setSlides(prevSlides => [...prevSlides, data.slide]);
+                setCurrentSlide(0); // Keep view on the first slide as new ones load
+            }
+        } catch (err) {
+            console.error('Error parsing stream chunk:', err);
+            setError('Error processing narration data.');
+        }
+      };
+
+      await processStream();
 
     } catch (err) {
       console.error('Error:', err);
       setError(err.message || 'An unexpected error occurred.');
-    } finally {
       setLoading(false);
     }
   };
