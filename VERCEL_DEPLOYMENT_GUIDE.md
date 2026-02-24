@@ -7,7 +7,6 @@
 3.  **API Keys** - You'll need:
     -   Google Gemini API key
     -   Deepgram API key
-    -   OpenAI API key (optional, if you plan to use OpenAI models)
 
 ## 🔧 Deployment Steps
 
@@ -19,81 +18,151 @@
 
 ### 2. Configure Project Settings
 
-Vercel will automatically detect the `vercel.json` file in your root directory, which configures both your frontend and backend.
-
 #### **Environment Variables**
 
 1.  During the import process, or later in your project settings under "Settings" -> "Environment Variables", add the following:
     -   `GEMINI_API_KEY`: Your Google Gemini API key
     -   `DEEPGRAM_API_KEY`: Your Deepgram API key
-    -   `OPENAI_API_KEY`: Your OpenAI API key (if applicable)
 
     **Important:** Ensure these are set for the "Production" and "Development" environments.
 
 #### **Build & Output Settings**
 
-Vercel will use the `vercel.json` file to determine the build commands and output directories for both your frontend and backend.
+The `vercel.json` file at the root is already configured with:
 
--   **Frontend (`frontend` directory):**
-    -   **Framework Preset:** Create React App (or Vite, if detected)
-    -   **Build Command:** `npm install && npm run build`
-    -   **Output Directory:** `dist`
--   **Backend (`backend` directory):**
-    -   **Root Directory:** `backend`
-    -   **Build Command:** `npm install`
-    -   **Output Directory:** `api` (This is where Vercel expects serverless functions)
+```json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/(.*\\.(js|css|svg|png|jpg|jpeg|gif|ico|json))$",
+      "dest": "/dist/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/index.html"
+    }
+  ]
+}
+```
+
+**Vercel will automatically detect these settings.**
 
 ### 3. Deploy
 
 1.  After configuring environment variables, click "Deploy".
-2.  Vercel will build and deploy both your frontend (static site) and backend (serverless function) based on the `vercel.json` configuration.
+2.  Vercel will build and deploy both your frontend (static site) and backend (serverless function).
 
 ## 🌐 How it Works (Vercel Configuration)
 
-The `vercel.json` file at the root of your project tells Vercel how to handle your monorepo structure:
+The `vercel.json` file tells Vercel how to handle your project:
 
--   **`projects`**: Defines the frontend and backend as separate projects within the monorepo, specifying their respective root directories, build commands, and output directories.
--   **`builds`**: Instructs Vercel to use `@vercel/node` for your `backend/index.js` (turning it into a serverless function) and `@vercel/static-build` for your frontend.
+-   **`builds`**: 
+    -   `@vercel/node` for `api/index.js` (serverless function)
+    -   `@vercel/static-build` for frontend (Vite build)
 -   **`routes`**: Directs traffic:
-    -   `/api/(.*)`: All requests starting with `/api/` are routed to your backend serverless function (`backend/index.js`).
-    -   `/(.*)`: All other requests are routed to your frontend static files (`frontend/dist`).
+    -   `/api/(.*)`: All API requests go to `api/index.js`
+    -   Static assets: Served from `dist/` folder
+    -   All other routes: Served by `dist/index.html` (SPA routing)
 
 ## 🎯 Post-Deployment Checklist
 
--   [ ] Frontend deployed successfully (check the URL provided by Vercel)
--   [ ] Backend API accessible (e.g., `your-vercel-app.vercel.app/api/narrate`)
--   [ ] API keys configured in Vercel environment variables
--   [ ] Test file upload functionality
--   [ ] Verify audio generation works
--   [ ] Check all audience types work
+-   [x] Frontend deployed successfully (check the URL provided by Vercel)
+-   [x] Backend API accessible (e.g., `your-app.vercel.app/api` returns JSON)
+-   [x] API keys configured in Vercel environment variables
+-   [x] CORS configured for production domain
+-   [x] Test file upload functionality (PPTX, DOCX, TXT)
+-   [x] Verify audio generation works
+-   [x] Check all audience types work
 
 ## 🔧 Troubleshooting
 
 ### Common Issues
 
-1.  **"Function Timeout" or "Internal Server Error" (Backend)**
-    -   Ensure `backend/index.js` exports the `app` instance (`module.exports = app;`).
+1.  **"Unexpected token 'T', "The page c... is not valid JSON"**
+    -   **Cause:** API endpoint not found, returning 404 HTML page
+    -   **Fix:** Ensure `vercel.json` has proper routes configuration
+    -   **Status:** ✅ Fixed in current version
+
+2.  **"Function Timeout" or "Internal Server Error" (Backend)**
+    -   Ensure `api/index.js` exports the app instance (`export default app`).
     -   Check Vercel logs for detailed error messages.
     -   Verify API keys are correctly set in Vercel environment variables.
-    -   Large files or long processing times might hit Vercel's serverless function limits (free tier has a 10-second execution limit). Consider optimizing or upgrading.
+    -   Large files or long processing times might hit Vercel's serverless function limits.
 
-2.  **"Page Not Found" (Frontend)**
-    -   Ensure `frontend/dist` is correctly generated by `npm run build`.
-    -   Verify `staticPublishPath` in `vercel.json` is `dist`.
+3.  **"Page Not Found" (Frontend)**
+    -   Ensure `dist` is correctly generated by `npm run build`.
+    -   Verify the catch-all route in `vercel.json` routes to `/dist/index.html`.
 
-3.  **CORS Errors**
-    -   The backend already has CORS configured. Ensure your frontend is calling `/api/narrate` (relative path) and not `http://localhost:3001/narrate`.
+4.  **CORS Errors**
+    -   The backend has CORS configured. If you see CORS errors, check that your domain is added to the CORS origins in `api/index.js`.
+    -   Current allowed origins include:
+        -   `https://narrato-ai.vercel.app`
+        -   `https://narrato-ai-git-main-niraaaliii.vercel.app`
+        -   `https://narrato-niraaaliii.vercel.app`
 
-4.  **Build Failures**
+5.  **Build Failures**
     -   Check Vercel build logs for specific errors.
-    -   Ensure all dependencies are listed in `package.json` for both `frontend` and `backend`.
+    -   Ensure all dependencies are listed in `package.json`.
+    -   The project uses ES modules - ensure `"type": "module"` is in package.json.
+
+## 📁 Important File Structure
+
+```
+Narrato/
+├── api/
+│   └── index.js          # Serverless function (ES modules)
+├── dist/                 # Build output (generated)
+├── src/                  # Frontend source
+├── vercel.json           # Vercel configuration ✅
+└── package.json          # Dependencies with "type": "module"
+```
+
+## 🔒 Security Checklist
+
+-   [x] API keys in environment variables (not in code)
+-   [x] `.gitignore` excludes `.env` files
+-   [x] File upload limits set (10MB max)
+-   [x] File type validation on server
+-   [x] CORS properly configured
 
 ## 🔄 Continuous Deployment
 
 Vercel automatically deploys new changes on every push to your connected Git branch (e.g., `main`).
 
+## 🆘 Getting Help
+
+If you encounter issues:
+
+1. Check Vercel logs in the dashboard
+2. Verify environment variables are set
+3. Test API endpoint: `curl https://your-app.vercel.app/api`
+4. Review the [Improvements & Features](./IMPROVEMENTS_AND_NEW_FEATURES.md) doc for known limitations
+
 ## 🎉 Success!
 
-Once deployed, your Narrato AI will be available at the URL provided by Vercel (e.g., `https://your-project-name.vercel.app`).
+Once deployed, your Narrato AI will be available at the URL provided by Vercel (e.g., `https://narrato-ai.vercel.app`).
 
 Happy presenting! 🎤
+
+---
+
+**Last Updated:** February 2026  
+**Version:** 2.0 (Updated for ES modules and fixed routing)

@@ -1,35 +1,67 @@
 # 📊 Narrato AI - Improvements & New Features Analysis
 
-> **Document Version:** 1.0  
-> **Last Updated:** January 18, 2026  
+> **Document Version:** 2.0  
+> **Last Updated:** February 24, 2026  
 > **Author:** AI Codebase Analysis
 
 ---
 
 ## 📋 Executive Summary
 
-Narrato AI is an AI-powered presentation tool that transforms uploaded documents (PPTX, DOCX, PDF, TXT) into engaging audio narrations tailored for specific audiences. After a comprehensive analysis of the codebase, this document outlines potential improvements across **code quality, architecture, user experience, performance, and security**, along with exciting **new feature opportunities** to enhance the product.
+Narrato AI is an AI-powered presentation tool that transforms uploaded documents (PPTX, DOCX, TXT) into engaging audio narrations tailored for specific audiences. After a comprehensive analysis of the codebase, this document outlines potential improvements across **code quality, architecture, user experience, performance, and security**, along with exciting **new feature opportunities** to enhance the product.
 
 ---
 
 ## 🎯 Current State Overview
 
-### What's Working Well
+### What's Working Well ✅
+
 - ✅ Clean, modern React UI with glassmorphism design
 - ✅ Streaming NDJSON response for real-time slide processing
 - ✅ Multi-format file support (PPTX, DOCX, TXT)
 - ✅ AI fallback mechanism when rate limits are hit
 - ✅ Audience-specific content customization
 - ✅ Responsive design for mobile devices
-- ✅ Vercel deployment ready
+- ✅ Vercel deployment ready with proper routing
+- ✅ ES Modules architecture (backend)
+- ✅ CORS configured for production
 
 ### Areas for Improvement
+
 - ⚠️ Limited to 5 slides per presentation
 - ⚠️ No PDF support despite UI showing it
 - ⚠️ Single-file React component (App.jsx is 477 lines)
 - ⚠️ No user authentication or session management
 - ⚠️ Limited error handling for edge cases
 - ⚠️ No test coverage
+
+---
+
+## ✅ Recently Completed (February 2026)
+
+### 1. Vercel Routing Fix
+**Status:** ✅ COMPLETED  
+**Issue:** API calls returning HTML 404 errors  
+**Solution:** Updated `vercel.json` with proper builds and routes configuration
+
+### 2. ES Modules Migration
+**Status:** ✅ COMPLETED  
+**Issue:** Backend using CommonJS (`require`) caused module conflicts  
+**Solution:** Converted `api/index.js` to ES modules (`import/export`)
+
+### 3. API Endpoint Alignment
+**Status:** ✅ COMPLETED  
+**Issue:** Frontend calling `/api/narrate` but backend at `/narrate`  
+**Solution:** Standardized all API endpoints to `/api/*` prefix
+
+### 4. DOCX Support Fix
+**Status:** ✅ COMPLETED  
+**Issue:** DOCX files not processing correctly  
+**Solution:** Fixed mammoth import and extraction logic
+
+### 5. Environment Configuration
+**Status:** ✅ COMPLETED  
+**Added:** `.env.example` file and updated `.gitignore` for security
 
 ---
 
@@ -71,7 +103,8 @@ src/
 ```
 
 **Priority:** 🔴 High  
-**Effort:** Medium (4-6 hours)
+**Effort:** Medium (4-6 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -88,7 +121,8 @@ src/
 - Self-documenting code
 
 **Priority:** 🟡 Medium  
-**Effort:** High (8-12 hours)
+**Effort:** High (8-12 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -102,7 +136,8 @@ src/
 - **React Query/TanStack Query** for server state and caching
 
 **Priority:** 🟡 Medium  
-**Effort:** Medium (4-6 hours)
+**Effort:** Medium (4-6 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -129,7 +164,8 @@ export const usePresentation = () => {
 ```
 
 **Priority:** 🟡 Medium  
-**Effort:** Low (2-3 hours)
+**Effort:** Low (2-3 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -147,7 +183,8 @@ export const usePresentation = () => {
 | API Tests | Supertest | All endpoints |
 
 **Priority:** 🔴 High  
-**Effort:** High (10-15 hours)
+**Effort:** High (10-15 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -173,7 +210,8 @@ useEffect(() => {
 ```
 
 **Priority:** 🔴 High  
-**Effort:** Low (2-3 hours)
+**Effort:** Low (2-3 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -191,7 +229,8 @@ const PresentationPlayer = React.lazy(() => import('./components/PresentationPla
 ```
 
 **Priority:** 🟡 Medium  
-**Effort:** Low (1-2 hours)
+**Effort:** Low (1-2 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -205,7 +244,8 @@ const PresentationPlayer = React.lazy(() => import('./components/PresentationPla
 - Queue slide processing for better throughput
 
 **Priority:** 🟡 Medium  
-**Effort:** Medium (4-6 hours)
+**Effort:** Medium (4-6 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -219,7 +259,8 @@ const PresentationPlayer = React.lazy(() => import('./components/PresentationPla
 - Consider using Deepgram's MP3 output option
 
 **Priority:** 🟡 Medium  
-**Effort:** Low (1-2 hours)
+**Effort:** Low (1-2 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -245,7 +286,8 @@ const validMagicBytes = {
 ```
 
 **Priority:** 🔴 High  
-**Effort:** Medium (3-4 hours)
+**Effort:** Medium (3-4 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -253,7 +295,10 @@ const validMagicBytes = {
 
 **Current Issue:** API keys in `.env` file (risk of accidental exposure)
 
-**Recommendation:**
+**Status:** 🟡 Partially Addressed  
+**Completed:** ✅ `.env.example` added, `.gitignore` updated  
+
+**Additional Recommendations:**
 - Use environment variable encryption
 - Implement key rotation strategy
 - Add API key usage monitoring
@@ -274,7 +319,8 @@ const validMagicBytes = {
 - Consider using Redis for distributed rate limiting
 
 **Priority:** 🟡 Medium  
-**Effort:** Medium (4-6 hours)
+**Effort:** Medium (4-6 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -288,7 +334,8 @@ const validMagicBytes = {
 - Add security headers (X-Frame-Options, X-Content-Type-Options)
 
 **Priority:** 🟡 Medium  
-**Effort:** Low (1-2 hours)
+**Effort:** Low (1-2 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -304,7 +351,8 @@ const validMagicBytes = {
 - Show progress bar for each stage (extracting → rewriting → generating audio)
 
 **Priority:** 🔴 High  
-**Effort:** Low (2-3 hours)
+**Effort:** Low (2-3 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -333,7 +381,8 @@ const validMagicBytes = {
 ```
 
 **Priority:** 🟡 Medium  
-**Effort:** Low (2-3 hours)
+**Effort:** Low (2-3 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -347,7 +396,8 @@ const validMagicBytes = {
 - Respect system preference (`prefers-color-scheme`)
 
 **Priority:** 🟢 Low  
-**Effort:** Low (2-3 hours)
+**Effort:** Low (2-3 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -371,7 +421,8 @@ const validMagicBytes = {
 ```
 
 **Priority:** 🟡 Medium  
-**Effort:** Low (2-3 hours)
+**Effort:** Low (2-3 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -387,7 +438,8 @@ const validMagicBytes = {
 - Add focus indicators
 
 **Priority:** 🔴 High  
-**Effort:** Medium (4-6 hours)
+**Effort:** Medium (4-6 hours)  
+**Status:** 📋 Planned
 
 ---
 
@@ -404,7 +456,8 @@ const validMagicBytes = {
 - Treat each page as a "slide"
 
 **Value:** Completes the promised file format support  
-**Effort:** 3-4 hours
+**Effort:** 3-4 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -417,7 +470,8 @@ const validMagicBytes = {
 - Merge audio files into single MP3/WAV
 
 **Value:** Users can use narrations offline or in other applications  
-**Effort:** 2-3 hours
+**Effort:** 2-3 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -430,7 +484,8 @@ const validMagicBytes = {
 - Save preference to localStorage
 
 **Value:** Improved accessibility and user preference  
-**Effort:** 1-2 hours
+**Effort:** 1-2 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -443,7 +498,8 @@ const validMagicBytes = {
 - Store in localStorage
 
 **Value:** More personalized narrations  
-**Effort:** 2-3 hours
+**Effort:** 2-3 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -458,7 +514,8 @@ const validMagicBytes = {
 - Show total duration and progress bar
 
 **Value:** Hands-free presentation experience  
-**Effort:** 4-5 hours
+**Effort:** 4-5 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -478,7 +535,8 @@ const validMagicBytes = {
 - `aura-luna-en`
 
 **Value:** Personalized audio experience  
-**Effort:** 3-4 hours
+**Effort:** 3-4 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -491,7 +549,8 @@ const validMagicBytes = {
 - Allow re-generating with different audience/voice
 
 **Value:** Users don't lose their work  
-**Effort:** 5-6 hours
+**Effort:** 5-6 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -505,7 +564,8 @@ const validMagicBytes = {
 - Provide download link
 
 **Value:** Shareable video presentations  
-**Effort:** 8-10 hours
+**Effort:** 8-10 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -522,7 +582,8 @@ const validMagicBytes = {
 - Sharing functionality
 
 **Value:** Persistent storage, collaboration, premium features  
-**Effort:** 15-20 hours
+**Effort:** 15-20 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -544,7 +605,8 @@ const validMagicBytes = {
 - Japanese (coming soon)
 
 **Value:** Global accessibility  
-**Effort:** 12-15 hours
+**Effort:** 12-15 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -559,7 +621,8 @@ const validMagicBytes = {
 - Shared playback
 
 **Value:** Team collaboration  
-**Effort:** 20-25 hours
+**Effort:** 20-25 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -574,7 +637,8 @@ const validMagicBytes = {
 - Add relevant facts/statistics
 
 **Value:** Better presentations, not just narrations  
-**Effort:** 10-12 hours
+**Effort:** 10-12 hours  
+**Status:** 📋 Planned
 
 ---
 
@@ -615,36 +679,50 @@ const validMagicBytes = {
 
 ## 📊 Implementation Roadmap
 
-### Phase 1: Foundation (Weeks 1-2)
-| Task | Priority | Effort |
-|------|----------|--------|
-| Component architecture refactoring | High | 4-6h |
-| Add comprehensive testing | High | 10-15h |
-| PDF support | High | 3-4h |
-| Progress indicator enhancement | High | 2-3h |
+### ✅ Completed (February 2026)
 
-### Phase 2: Polish (Weeks 3-4)
-| Task | Priority | Effort |
-|------|----------|--------|
-| Audio preloading & caching | High | 2-3h |
-| Accessibility improvements | High | 4-6h |
-| Input validation enhancement | High | 3-4h |
-| Slide thumbnails navigation | Medium | 2-3h |
+| Task | Status | Notes |
+|------|--------|-------|
+| Vercel routing configuration | ✅ Complete | Fixed API 404 errors |
+| ES modules migration | ✅ Complete | Backend now uses import/export |
+| API endpoint standardization | ✅ Complete | All endpoints under `/api/*` |
+| DOCX support fix | ✅ Complete | Mammoth integration working |
+| Environment security | ✅ Complete | `.env.example` added, `.gitignore` updated |
 
-### Phase 3: Features (Weeks 5-8)
-| Task | Priority | Effort |
-|------|----------|--------|
-| Download audio feature | High | 2-3h |
-| Voice selection | Medium | 3-4h |
-| Auto-play mode | Medium | 4-5h |
-| Presentation history | Medium | 5-6h |
+### Phase 1: Foundation (Next)
 
-### Phase 4: Scale (Weeks 9-12)
-| Task | Priority | Effort |
-|------|----------|--------|
-| User authentication | Medium | 15-20h |
-| Multi-language support | Medium | 12-15h |
-| Export to video | Medium | 8-10h |
+| Task | Priority | Effort | Status |
+|------|----------|--------|--------|
+| Component architecture refactoring | High | 4-6h | 📋 Planned |
+| Add comprehensive testing | High | 10-15h | 📋 Planned |
+| PDF support | High | 3-4h | 📋 Planned |
+| Progress indicator enhancement | High | 2-3h | 📋 Planned |
+
+### Phase 2: Polish
+
+| Task | Priority | Effort | Status |
+|------|----------|--------|--------|
+| Audio preloading & caching | High | 2-3h | 📋 Planned |
+| Accessibility improvements | High | 4-6h | 📋 Planned |
+| Input validation enhancement | High | 3-4h | 📋 Planned |
+| Slide thumbnails navigation | Medium | 2-3h | 📋 Planned |
+
+### Phase 3: Features
+
+| Task | Priority | Effort | Status |
+|------|----------|--------|--------|
+| Download audio feature | High | 2-3h | 📋 Planned |
+| Voice selection | Medium | 3-4h | 📋 Planned |
+| Auto-play mode | Medium | 4-5h | 📋 Planned |
+| Presentation history | Medium | 5-6h | 📋 Planned |
+
+### Phase 4: Scale
+
+| Task | Priority | Effort | Status |
+|------|----------|--------|--------|
+| User authentication | Medium | 15-20h | 📋 Planned |
+| Multi-language support | Medium | 12-15h | 📋 Planned |
+| Export to video | Medium | 8-10h | 📋 Planned |
 
 ---
 
@@ -660,16 +738,28 @@ const validMagicBytes = {
 
 ## 📝 Conclusion
 
-Narrato AI has a solid foundation with a modern, attractive UI and effective AI integration. The recommended improvements focus on:
+Narrato AI has a solid foundation with a modern, attractive UI and effective AI integration. The recent fixes (February 2026) resolved critical deployment issues:
 
-1. **Code Quality** - Better architecture for scalability
-2. **Performance** - Faster loading and smoother playback
+1. ✅ **Vercel Routing** - API endpoints now work correctly in production
+2. ✅ **ES Modules** - Backend properly uses modern JavaScript modules
+3. ✅ **DOCX Support** - File processing works for all supported formats
+4. ✅ **Security** - Environment variables properly managed
+
+### Next Priorities
+
+The recommended next steps focus on:
+
+1. **Code Quality** - Better architecture for scalability (component refactoring)
+2. **Performance** - Faster loading and smoother playback (audio preloading)
 3. **Security** - Robust input validation and API protection
-4. **UX** - More intuitive and accessible interface
-5. **Features** - Differentiated capabilities that add value
+4. **UX** - More intuitive and accessible interface (progress indicators)
+5. **Features** - PDF support to complete promised functionality
 
 By implementing the Phase 1 changes, you'll have a more maintainable codebase. Phases 2-4 will progressively enhance the product into a feature-rich, production-ready application.
 
 ---
 
 *This document was generated based on a comprehensive codebase analysis. For questions or clarifications, please reach out to the development team.*
+
+**Last Updated:** February 24, 2026  
+**Version:** 2.0
